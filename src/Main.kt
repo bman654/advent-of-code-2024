@@ -16,16 +16,16 @@ fun main() {
     rightList.add(numbers[1])
   }
 
-  // Sort both lists
-  leftList.sort()
-  rightList.sort()
+  // Create a frequency map for the right list
+  val rightCount = rightList.groupingBy { it }.eachCount()
 
-  // Calculate the total distance
-  var totalDistance = 0
-  for (i in leftList.indices) {
-    totalDistance += Math.abs(leftList[i] - rightList[i])
+  // Calculate the total similarity score
+  var similarityScore = 0
+  for (number in leftList) {
+    val countInRight = rightCount[number] ?: 0
+    similarityScore += number * countInRight
   }
 
-  // Output the total distance
-  println("Total distance: $totalDistance")
+  // Output the similarity score
+  println("Similarity score: $similarityScore")
 }
