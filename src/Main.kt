@@ -1,31 +1,28 @@
 import java.io.File
 
+fun isSafeReport(levels: List<Int>): Boolean {
+  if (levels.size < 2) return true  // A single number is trivially safe
+
+  val increasing = levels[1] > levels[0]
+  for (i in 1..<levels.size) {
+    val diff = levels[i] - levels[i - 1]
+    if (increasing && diff !in 1..3) return false
+    if (!increasing && diff !in -3..-1) return false
+    if (increasing != (levels[i] > levels[i - 1])) return false
+  }
+  return true
+}
+
 fun main() {
-
   // Read the input file
-  val inputLines = File("data/input01.txt").readLines()
+  val inputLines = File("data/input02.txt").readLines()
 
-  // Initialize two lists to hold the location IDs from the two columns
-  val leftList = mutableListOf<Int>()
-  val rightList = mutableListOf<Int>()
-
-  // Parse each line to extract numbers and add them to the respective lists
-  for (line in inputLines) {
-    val numbers = line.split("\\s+".toRegex()).map { it.toInt() }
-    leftList.add(numbers[0])
-    rightList.add(numbers[1])
+  // Count safe reports
+  val safeCount = inputLines.count { line ->
+    val levels = line.split("\\s+".toRegex()).map { it.toInt() }
+    isSafeReport(levels)
   }
 
-  // Create a frequency map for the right list
-  val rightCount = rightList.groupingBy { it }.eachCount()
-
-  // Calculate the total similarity score
-  var similarityScore = 0
-  for (number in leftList) {
-    val countInRight = rightCount[number] ?: 0
-    similarityScore += number * countInRight
-  }
-
-  // Output the similarity score
-  println("Similarity score: $similarityScore")
+  // Output the number of safe reports
+  println("Number of safe reports: $safeCount")
 }
