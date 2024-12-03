@@ -13,6 +13,16 @@ fun isSafeReport(levels: List<Int>): Boolean {
   return true
 }
 
+fun isSafeWithDampener(levels: List<Int>): Boolean {
+  if (isSafeReport(levels)) return true
+  for (i in levels.indices) {
+    // Create a new list with one element removed
+    val adjustedLevels = levels.toMutableList().apply { removeAt(i) }
+    if (isSafeReport(adjustedLevels)) return true
+  }
+  return false
+}
+
 fun main() {
   // Read the input file
   val inputLines = File("data/input02.txt").readLines()
@@ -20,7 +30,7 @@ fun main() {
   // Count safe reports
   val safeCount = inputLines.count { line ->
     val levels = line.split("\\s+".toRegex()).map { it.toInt() }
-    isSafeReport(levels)
+    isSafeWithDampener(levels)
   }
 
   // Output the number of safe reports
