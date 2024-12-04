@@ -3,40 +3,24 @@ import java.io.File
 fun main() {
   // Read the input file
   val input = File("data/input04.txt").readLines()
-  val word = "XMAS"
-  val wordLength = word.length
-  val directions = listOf(
-    Pair(0, 1),  // right
-    Pair(0, -1), // left
-    Pair(1, 0),  // down
-    Pair(-1, 0), // up
-    Pair(1, 1),  // diagonal down-right
-    Pair(1, -1), // diagonal down-left
-    Pair(-1, 1), // diagonal up-right
-    Pair(-1, -1) // diagonal up-left
-  )
 
-  fun isWordAtPosition(grid: List<String>, row: Int, col: Int, dRow: Int, dCol: Int): Boolean {
-    for (i in 0 until wordLength) {
-      val newRow = row + i * dRow
-      val newCol = col + i * dCol
-      if (newRow !in grid.indices || newCol !in grid[0].indices || grid[newRow][newCol] != word[i]) {
-        return false
-      }
+  fun isXMasAtPosition(grid: List<String>, row: Int, col: Int): Boolean {
+    if (row - 1 in grid.indices && row + 1 in grid.indices && col - 1 in grid.first().indices && col + 1 in grid.first().indices) {
+      val w1 = "${grid[row - 1][col - 1]}${grid[row][col]}${grid[row + 1][col + 1]}"
+      val w2 = "${grid[row - 1][col + 1]}${grid[row][col]}${grid[row + 1][col - 1]}"
+      return (w1 == "SAM" || w1 == "MAS") && (w2 == "SAM" || w2 == "MAS")
     }
-    return true
+    return false
   }
 
   var count = 0
   for (row in input.indices) {
     for (col in input[row].indices) {
-      for ((dRow, dCol) in directions) {
-        if (isWordAtPosition(input, row, col, dRow, dCol)) {
-          count++
-        }
+      if (isXMasAtPosition(input, row, col)) {
+        count++
       }
     }
   }
 
-  println("The word 'XMAS' appears $count times in the grid.")
+  println("The pattern 'X-MAS' appears $count times in the grid.")
 }
