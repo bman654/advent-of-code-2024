@@ -1,38 +1,31 @@
 import java.io.File
 
-fun isSafeReport(levels: List<Int>): Boolean {
-  if (levels.size < 2) return true  // A single number is trivially safe
+data class BinaryOperator(val operator: String, val operands: Pair<Int, Int>)
 
-  val increasing = levels[1] > levels[0]
-  for (i in 1..<levels.size) {
-    val diff = levels[i] - levels[i - 1]
-    if (increasing && diff !in 1..3) return false
-    if (!increasing && diff !in -3..-1) return false
-    if (increasing != (levels[i] > levels[i - 1])) return false
+fun findValidInstructions(data: String): Sequence<BinaryOperator> {
+  val regex = """(?<operator>mul)\((?<operand1>\d{1,3}),(?<operand2>\d{1,3})\)""".toRegex()
+
+  // find all matches and yield BinaryOperator for each match
+  return regex.findAll(data).map {
+    BinaryOperator(it.groups["operator"]!!.value, Pair(it.groups["operand1"]!!.value.toInt(), it.groups["operand2"]!!.value.toInt()))
   }
-  return true
 }
 
-fun isSafeWithDampener(levels: List<Int>): Boolean {
-  if (isSafeReport(levels)) return true
-  for (i in levels.indices) {
-    // Create a new list with one element removed
-    val adjustedLevels = levels.toMutableList().apply { removeAt(i) }
-    if (isSafeReport(adjustedLevels)) return true
+fun executeProgram(instructions: Sequence<BinaryOperator>): Int {
+  var accumulator = 0
+  for (instruction in instructions) {
+    when (instruction.operator) {
+      "mul" -> accumulator += instruction.operands.first * instruction.operands.second
+    }
   }
-  return false
+  return accumulator
 }
 
 fun main() {
   // Read the input file
-  val inputLines = File("data/input02.txt").readLines()
+  val input = File("data/input03.txt").readText()
+  val program = findValidInstructions(input)
+  val result = executeProgram(program)
 
-  // Count safe reports
-  val safeCount = inputLines.count { line ->
-    val levels = line.split("\\s+".toRegex()).map { it.toInt() }
-    isSafeWithDampener(levels)
-  }
-
-  // Output the number of safe reports
-  println("Number of safe reports: $safeCount")
+  println("Result: $result")
 }
