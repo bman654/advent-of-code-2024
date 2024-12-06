@@ -52,20 +52,43 @@ data class LabMap(val lines: List<String>) {
   }
 }
 
+fun tryObstaclePosition(map: LabMap, obstacle: Coord): Boolean {
+  var guard = map.findGuard()
+  val visited = mutableSetOf(guard)
+
+  while (!map.isOutside(guard.loc + guard.dir)) {
+    while (map.get(guard.loc + guard.dir) == '#' || obstacle == guard.loc + guard.dir) {
+      guard = guard.copy(dir = guard.dir.rotate90())
+    }
+    guard = guard.copy(loc = guard.loc + guard.dir)
+    if (visited.contains(guard)) {
+      return true
+    }
+    visited.add(guard)
+  }
+
+  return false
+}
+
 fun main() {
   // Read the input file
   val input = File("data/input06.txt").readLines()
   val map = LabMap(input)
   var guard = map.findGuard()
-  val visited = mutableSetOf(guard.loc)
+  val invalidLoc = guard.loc
+  val possibleLocations = mutableSetOf<Coord>()
 
   while (!map.isOutside(guard.loc + guard.dir)) {
     while (map.get(guard.loc + guard.dir) == '#') {
       guard = guard.copy(dir = guard.dir.rotate90())
     }
     guard = guard.copy(loc = guard.loc + guard.dir)
-    visited.add(guard.loc)
+    if (guard.loc != invalidLoc) {
+      possibleLocations.add(guard.loc)
+    }
   }
 
-  println(visited.size)
+  val result = possibleLocations.filter { tryObstaclePosition(map, it) }.size
+
+  println(result)
 }
