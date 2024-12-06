@@ -1,54 +1,71 @@
 import java.io.File
 
-data class Rule(val a: Int, val b: Int) {
-  constructor(items: List<Int>) : this(items[0], items[1])
-}
-data class Update private constructor(val pages: List<Int>, var pageLookup: Map<Int, Int>) {
-  constructor(pages: List<Int>) : this(
-    pages,
-    pages.mapIndexed { index, page -> Pair(page, index)}.toMap()
-  )
-}
-
-fun passesRule(update: Update, rule: Rule): Boolean {
-  return (update.pageLookup[rule.a] ?: Int.MIN_VALUE) < (update.pageLookup[rule.b] ?: Int.MAX_VALUE)
-}
-
-fun fix(update: Update, rules: List<Rule>): Update {
-  val validRules = rules.filter { update.pageLookup.containsKey(it.a) && update.pageLookup.containsKey(it.b) }
-  // construct Map<int, Set<int>> where the key is a number and value is all the numbers that come after it directly or indirectly
-  val orderLookup = mutableMapOf<Int, MutableSet<Int>>()
-  for (rule in validRules) {
-    if (orderLookup.containsKey(rule.a)) {
-      orderLookup[rule.a]!!.add(rule.b)
-    }
-    else {
-      orderLookup[rule.a] = mutableSetOf(rule.b)
-    }
+data class Coord(val x: Int, val y: Int) {
+  operator fun plus(other: Coord): Coord {
+    return Coord(x + other.x, y + other.y)
   }
 
-  // now sort Update pages
-  val orderedPages = update.pages.sortedWith { a, b ->
-    if (orderLookup.containsKey(a) && orderLookup[a]!!.contains(b)) {
-      return@sortedWith -1
-    }
-    if (orderLookup.containsKey(b) && orderLookup[b]!!.contains(a)) {
-      return@sortedWith 1
-    }
-    return@sortedWith 0
+  fun rotate90(): Coord {
+    return Coord(-y, x)
   }
-  return Update(orderedPages)
+}
+data class GuardPos(val loc: Coord, val dir: Coord) {
+  constructor(loc: Coord, indicator: String) :
+    this(
+      loc,
+      Coord(
+        when (indicator) {
+          "^", "v" -> 0
+          "<" -> -1
+          else -> 1
+        }, when (indicator) {
+          "<", ">" -> 0
+          "^" -> -1
+          else -> 1
+        }
+      )
+    )
 }
 
+data class LabMap(val lines: List<String>) {
+  val W: Int get() = lines[0].length
+  val H: Int get() = lines.size
+
+  fun get(c: Coord): Char {
+    return lines[c.y][c.x]
+  }
+
+  fun isOutside(c: Coord): Boolean {
+    return c.x < 0 || c.x >= W || c.y < 0 || c.y >= H
+  }
+
+  fun findGuard(): GuardPos {
+    lines.forEachIndexed { y, line ->
+      run {
+        val r = line.findAnyOf(listOf("<", ">", "v", "^"))
+        if (r != null) {
+          return GuardPos(Coord(r.first, y), r.second)
+        }
+      }
+    }
+    throw Exception("No guards found")
+  }
+}
 
 fun main() {
   // Read the input file
-  val input = File("data/input05.txt").readLines()
-  val rules = input.filter { it.contains('|')}.map{ Rule(it.split('|').map{it.toInt()})}
-  val updates = input.filter{ it.contains(",")}.map{ Update(it.split(',').map{it.toInt()}) }
+  val input = File("data/input06.txt").readLines()
+  val map = LabMap(input)
+  var guard = map.findGuard()
+  val visited = mutableSetOf(guard.loc)
 
-  val badUpdates = updates.filter { !rules.all { rule -> passesRule(it, rule) } }
-  val fixed = badUpdates.map { fix(it, rules) }
-  val result = fixed.sumOf { it.pages[it.pages.size / 2] }
-  println(result)
+  while (!map.isOutside(guard.loc + guard.dir)) {
+    while (map.get(guard.loc + guard.dir) == '#') {
+      guard = guard.copy(dir = guard.dir.rotate90())
+    }
+    guard = guard.copy(loc = guard.loc + guard.dir)
+    visited.add(guard.loc)
+  }
+
+  println(visited.size)
 }
