@@ -1,26 +1,25 @@
 import java.io.File
 
+data class Rule(val a: Int, val b: Int) {
+  constructor(items: List<Int>) : this(items[0], items[1])
+}
+data class Update private constructor(val pages: List<Int>, var pageLookup: Map<Int, Int>) {
+  constructor(pages: List<Int>) : this(
+    pages,
+    pages.mapIndexed { index, page -> Pair(page, index)}.toMap()
+  )
+}
+
+fun passesRule(update: Update, rule: Rule): Boolean {
+  return (update.pageLookup[rule.a] ?: Int.MIN_VALUE) < (update.pageLookup[rule.b] ?: Int.MAX_VALUE)
+}
+
 fun main() {
   // Read the input file
-  val input = File("data/input04.txt").readLines()
+  val input = File("data/input05.txt").readLines()
+  val rules = input.filter { it.contains('|')}.map{ Rule(it.split('|').map{it.toInt()})}
+  val updates = input.filter{ it.contains(",")}.map{ Update(it.split(',').map{it.toInt()}) }
 
-  fun isXMasAtPosition(grid: List<String>, row: Int, col: Int): Boolean {
-    if (row - 1 in grid.indices && row + 1 in grid.indices && col - 1 in grid.first().indices && col + 1 in grid.first().indices) {
-      val w1 = "${grid[row - 1][col - 1]}${grid[row][col]}${grid[row + 1][col + 1]}"
-      val w2 = "${grid[row - 1][col + 1]}${grid[row][col]}${grid[row + 1][col - 1]}"
-      return (w1 == "SAM" || w1 == "MAS") && (w2 == "SAM" || w2 == "MAS")
-    }
-    return false
-  }
-
-  var count = 0
-  for (row in input.indices) {
-    for (col in input[row].indices) {
-      if (isXMasAtPosition(input, row, col)) {
-        count++
-      }
-    }
-  }
-
-  println("The pattern 'X-MAS' appears $count times in the grid.")
+  val result = updates.filter { rules.all { rule -> passesRule(it, rule) } }.map { it.pages[it.pages.size / 2]}.sum()
+  println(result)
 }
