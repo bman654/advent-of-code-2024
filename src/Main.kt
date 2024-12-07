@@ -2,7 +2,7 @@ import java.io.File
 
 data class Equation(val testValue: Long, val operands: List<Long>)
 
-val operators = listOf("+", "*")
+val operators = listOf("+", "*", "|")
 
 fun processSubEquation(target: Long, subEquation: List<Long>): List<Long> {
   when (subEquation.size) {
@@ -12,6 +12,7 @@ fun processSubEquation(target: Long, subEquation: List<Long>): List<Long> {
         when (operator) {
           "+" -> subEquation[0] + subEquation[1]
           "*" -> subEquation[0] * subEquation[1]
+          "|" -> "${subEquation[0]}${subEquation[1]}".toLong()
           else -> 0
         }
       }
@@ -24,6 +25,7 @@ fun processSubEquation(target: Long, subEquation: List<Long>): List<Long> {
         when (operator) {
           "+" -> children.map { currentNumber + it }
           "*" -> children.map { currentNumber * it }
+          "|" -> children.map { "${it}${currentNumber}".toLong() }
           else -> listOf(0)
         }}
     }
