@@ -1,56 +1,71 @@
 import java.io.File
+import javax.swing.UIManager.put
 
-data class Equation(val testValue: Long, val operands: List<Long>)
+data class Coord(val x: Int, val y: Int) {
+  fun plus(other: Coord): Coord = Coord(x + other.x, y + other.y)
+  fun minus(other: Coord): Coord = Coord(x - other.x, y - other.y)
+}
 
-val operators = listOf("+", "*", "|")
+data class Grid(val width: Int, val height: Int, val data: Array<Int>) {
+  constructor(lines: List<String>) : this(
+    width = lines[0].length,
+    height = lines.size,
+    data = lines.joinToString(separator = "").map { it.code }.toTypedArray()
+  )
 
-fun processSubEquation(target: Long, subEquation: List<Long>): List<Long> {
-  when (subEquation.size) {
-    1 -> return subEquation
-    2 -> {
-      return operators.map { operator ->
-        when (operator) {
-          "+" -> subEquation[0] + subEquation[1]
-          "*" -> subEquation[0] * subEquation[1]
-          "|" -> "${subEquation[0]}${subEquation[1]}".toLong()
-          else -> 0
+  fun get(x: Int, y: Int): Char = data[y * width + x].toChar()
+  fun get(coord: Coord): Char = get(coord.x, coord.y)
+
+  fun putIfEmpty(coord: Coord, c: Char) {
+    if (get(coord) == '.') {
+      data[coord.y * width + coord.x] = c.code
+    }
+  }
+
+  fun isOutside(coord: Coord): Boolean = coord.x < 0 || coord.y < 0 || coord.x >= width || coord.y >= height
+
+  override fun toString(): String {
+    val builder = StringBuilder()
+    for (y in 0..<height) {
+      for (x in 0..<width) {
+        builder.append(get(x, y))
+      }
+      if (y < height - 1) {
+        builder.append("\n")   // Newline after each row, except last
+      }
+    }
+    return builder.toString()
+  }
+
+  fun findAntennaSets(): Map<Char, List<Coord>> {
+    val antennaSets = mutableMapOf<Char, MutableList<Coord>>()
+    for (y in 0..<height) {
+      for (x in 0..<width) {
+        val char = get(x, y)
+        if (char.isLetterOrDigit()) {
+          antennaSets.computeIfAbsent(char) { mutableListOf() }.add(Coord(x, y))
         }
       }
     }
-    else -> {
-      // process children and filter out the ones that are past our target already
-      val currentNumber = subEquation.last()
-      val children = processSubEquation(target, subEquation.subList(0, subEquation.size - 1)).filter { it <= target }
-      return operators.flatMap { operator ->
-        when (operator) {
-          "+" -> children.map { currentNumber + it }
-          "*" -> children.map { currentNumber * it }
-          "|" -> children.map { "${it}${currentNumber}".toLong() }
-          else -> listOf(0)
-        }}
-    }
+    return antennaSets
   }
-}
-
-fun processEquation(equation: Equation): Boolean {
-  return processSubEquation(equation.testValue, equation.operands).any { it == equation.testValue }
 }
 
 fun main() {
   // Read the input file
-  val input = File("data/input07.txt").readLines()
-
-  val result = input.map { line ->
-    line.split("[:\\s]+".toRegex())
-      .map { it -> it.toLong() }
-      .let { parts -> Equation(parts[0], parts.subList(1, parts.size)) }
+  val input = File("data/input08-sample.txt").readLines()
+  val grid = Grid(input)
+  val antinodes = grid.findAntennaSets().values
+    .flatMap { antennaSet ->
+      antennaSet.flatMapIndexed { index, coord1 -> antennaSet.subList(index + 1, antennaSet.size)
+        .flatMap { coord2 -> listOf(coord2.plus(coord2.minus(coord1)), coord1.plus(coord1.minus(coord2)))
+        }
+      }
+        .filter { !grid.isOutside(it) }
   }
-    .filter { equation -> processEquation(equation) }
-    .filter {
-      println("Kept ${it.testValue}")
-      true
-    }
-    .sumOf { it.testValue }
+    .toSet()
 
-  println(result)
+  antinodes.forEach { grid.putIfEmpty(it, '#') }
+  println(grid)
+  println(antinodes.size)
 }
