@@ -4,6 +4,18 @@ import javax.swing.UIManager.put
 data class Coord(val x: Int, val y: Int) {
   fun plus(other: Coord): Coord = Coord(x + other.x, y + other.y)
   fun minus(other: Coord): Coord = Coord(x - other.x, y - other.y)
+
+  fun slopeTo(other: Coord): Coord {
+    val dy = other.y - y
+    val dx = other.x - x
+    val gcd = gcd(dy, dx)
+    return Coord(dx / gcd, dy / gcd)
+  }
+
+  private fun gcd(a: Int, b: Int): Int {
+    if (b == 0) return a
+    return gcd(b, a % b)
+  }
 }
 
 data class Grid(val width: Int, val height: Int, val data: Array<Int>) {
@@ -53,12 +65,25 @@ data class Grid(val width: Int, val height: Int, val data: Array<Int>) {
 
 fun main() {
   // Read the input file
-  val input = File("data/input08-sample.txt").readLines()
+  val input = File("data/input08.txt").readLines()
   val grid = Grid(input)
   val antinodes = grid.findAntennaSets().values
     .flatMap { antennaSet ->
       antennaSet.flatMapIndexed { index, coord1 -> antennaSet.subList(index + 1, antennaSet.size)
-        .flatMap { coord2 -> listOf(coord2.plus(coord2.minus(coord1)), coord1.plus(coord1.minus(coord2)))
+        .flatMap { coord2 ->
+          val slope = coord1.slopeTo(coord2)
+          sequence {
+            var current = coord2
+            do {
+              yield(current)
+              current = current.plus(slope)
+            } while (!grid.isOutside(current))
+            current = coord2.minus(slope)
+            do {
+              yield(current)
+              current = current.minus(slope)
+            } while (!grid.isOutside(current))
+          }
         }
       }
         .filter { !grid.isOutside(it) }
