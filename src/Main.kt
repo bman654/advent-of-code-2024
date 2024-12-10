@@ -25,29 +25,29 @@ class DiskMap(input: String) {
   }
 
   fun compact() {
-    var fileId = files.size - 1
-    while (!freeBlocks.isEmpty() && fileId > 0) {
-      val free = freeBlocks.removeFirst()
-      val file = files[fileId].removeFirst()
-      if (file.blockId < free.blockId) {
-        // no more free space
-        files[fileId].addFirst(file)
-        fileId = 0
+    for (file in files.reversed()) {
+      val f = file.removeFirst()
+      val unusedFreeBlocks = LinkedList<Allocation>()
+      while (freeBlocks.isNotEmpty() && f.blockId >= freeBlocks.first.blockId) {
+        val freeBlock = freeBlocks.removeFirst()
+        if (freeBlock.size > f.size) {
+          file.addFirst(Allocation(freeBlock.blockId, f.size))
+          unusedFreeBlocks.addFirst(Allocation(freeBlock.blockId + f.size, freeBlock.size - f.size))
+          break
+        }
+        else if (freeBlock.size == f.size) {
+          file.addFirst(freeBlock)
+          break
+        }
+        else {
+          unusedFreeBlocks.addFirst(freeBlock)
+        }
       }
-      else if (file.size < free.size) {
-        files[fileId].addLast(Allocation(free.blockId, file.size))
-        freeBlocks.addFirst(Allocation(free.blockId + file.size, free.size - file.size))
-        --fileId
+
+      if (file.isEmpty()) {
+        file.addLast(f)
       }
-      else if (file.size == free.size) {
-        files[fileId].addLast(Allocation(free.blockId, file.size))
-        --fileId
-      }
-      else {
-        // free space not big enough
-        files[fileId].addLast(Allocation(free.blockId, free.size))
-        files[fileId].addFirst(Allocation(file.blockId, file.size - free.size))
-      }
+      unusedFreeBlocks.forEach { freeBlocks.addFirst(it) }
     }
   }
 
