@@ -1,96 +1,65 @@
 import java.io.File
-import javax.swing.UIManager.put
+import java.util.*
 
-data class Coord(val x: Int, val y: Int) {
-  fun plus(other: Coord): Coord = Coord(x + other.x, y + other.y)
-  fun minus(other: Coord): Coord = Coord(x - other.x, y - other.y)
+data class Allocation(val blockId: Int, val size: Int)
 
-  fun slopeTo(other: Coord): Coord {
-    val dy = other.y - y
-    val dx = other.x - x
-    val gcd = gcd(dy, dx)
-    return Coord(dx / gcd, dy / gcd)
-  }
+class DiskMap(input: String) {
+  private val files: Array<LinkedList<Allocation>>
+  private val freeBlocks: LinkedList<Allocation>
 
-  private fun gcd(a: Int, b: Int): Int {
-    if (b == 0) return a
-    return gcd(b, a % b)
-  }
-}
-
-data class Grid(val width: Int, val height: Int, val data: Array<Int>) {
-  constructor(lines: List<String>) : this(
-    width = lines[0].length,
-    height = lines.size,
-    data = lines.joinToString(separator = "").map { it.code }.toTypedArray()
-  )
-
-  fun get(x: Int, y: Int): Char = data[y * width + x].toChar()
-  fun get(coord: Coord): Char = get(coord.x, coord.y)
-
-  fun putIfEmpty(coord: Coord, c: Char) {
-    if (get(coord) == '.') {
-      data[coord.y * width + coord.x] = c.code
+  init {
+    val numFiles = (input.length + 1) / 2
+    files = Array(numFiles) { LinkedList() }
+    freeBlocks = LinkedList()
+    var blockId = 0
+    input.forEachIndexed { index, c ->
+      val size = c.digitToInt()
+      if (index % 2 == 0) {
+        files[index / 2].addLast(Allocation(blockId, size))
+      }
+      else {
+        freeBlocks.addLast(Allocation(blockId, size))
+      }
+      blockId += size
     }
   }
 
-  fun isOutside(coord: Coord): Boolean = coord.x < 0 || coord.y < 0 || coord.x >= width || coord.y >= height
-
-  override fun toString(): String {
-    val builder = StringBuilder()
-    for (y in 0..<height) {
-      for (x in 0..<width) {
-        builder.append(get(x, y))
+  fun compact() {
+    var fileId = files.size - 1
+    while (!freeBlocks.isEmpty() && fileId > 0) {
+      val free = freeBlocks.removeFirst()
+      val file = files[fileId].removeFirst()
+      if (file.blockId < free.blockId) {
+        // no more free space
+        files[fileId].addFirst(file)
+        fileId = 0
       }
-      if (y < height - 1) {
-        builder.append("\n")   // Newline after each row, except last
+      else if (file.size < free.size) {
+        files[fileId].addLast(Allocation(free.blockId, file.size))
+        freeBlocks.addFirst(Allocation(free.blockId + file.size, free.size - file.size))
+        --fileId
+      }
+      else if (file.size == free.size) {
+        files[fileId].addLast(Allocation(free.blockId, file.size))
+        --fileId
+      }
+      else {
+        // free space not big enough
+        files[fileId].addLast(Allocation(free.blockId, free.size))
+        files[fileId].addFirst(Allocation(file.blockId, file.size - free.size))
       }
     }
-    return builder.toString()
   }
 
-  fun findAntennaSets(): Map<Char, List<Coord>> {
-    val antennaSets = mutableMapOf<Char, MutableList<Coord>>()
-    for (y in 0..<height) {
-      for (x in 0..<width) {
-        val char = get(x, y)
-        if (char.isLetterOrDigit()) {
-          antennaSets.computeIfAbsent(char) { mutableListOf() }.add(Coord(x, y))
-        }
-      }
-    }
-    return antennaSets
+  fun checksum(): Long {
+    return files.withIndex().sumOf { (fileId, value) -> value.sumOf { allocation -> (0..<allocation.size).sumOf { (allocation.blockId + it.toLong()) * fileId } } }
   }
 }
 
 fun main() {
   // Read the input file
-  val input = File("data/input08.txt").readLines()
-  val grid = Grid(input)
-  val antinodes = grid.findAntennaSets().values
-    .flatMap { antennaSet ->
-      antennaSet.flatMapIndexed { index, coord1 -> antennaSet.subList(index + 1, antennaSet.size)
-        .flatMap { coord2 ->
-          val slope = coord1.slopeTo(coord2)
-          sequence {
-            var current = coord2
-            do {
-              yield(current)
-              current = current.plus(slope)
-            } while (!grid.isOutside(current))
-            current = coord2.minus(slope)
-            do {
-              yield(current)
-              current = current.minus(slope)
-            } while (!grid.isOutside(current))
-          }
-        }
-      }
-        .filter { !grid.isOutside(it) }
-  }
-    .toSet()
-
-  antinodes.forEach { grid.putIfEmpty(it, '#') }
-  println(grid)
-  println(antinodes.size)
+  val input = File("data/input09.txt").readLines()
+  val diskMap = DiskMap(input[0])
+  diskMap.compact()
+  println("Checksum: ${diskMap.checksum()}")
 }
